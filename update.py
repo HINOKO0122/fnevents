@@ -6,27 +6,17 @@ from datetime import datetime, timedelta
 
 TARGET_URL = "https://fortnitetracker.com/events"
 
-# 時間計算関数
 def calculate_time(status_text, fallback_days, region):
     now = datetime.utcnow()
-    
     region_utc_hours = {
-        "ASIA": 9,   # JST 18:00
-        "OCE": 8,    # AEST 18:00
-        "ME": 15,    # AST 18:00
-        "EU": 17,    # CET 18:00
-        "BR": 21,    # BRT 18:00
-        "NAE": 23,   # EST 18:00
-        "NAC": 0,    # CST 18:00
-        "NAW": 2,    # PST 18:00
-        "ALL": 9
+        "ASIA": 9, "OCE": 8, "ME": 15, "EU": 17, 
+        "BR": 21, "NAE": 23, "NAC": 0, "NAW": 2, "ALL": 9
     }
     
     num_match = re.search(r'\d+', status_text)
     if num_match:
         num = int(num_match.group())
         text_lower = status_text.lower()
-        
         if "hr" in text_lower or "hour" in text_lower:
             return now + timedelta(hours=num)
         elif "min" in text_lower:
@@ -54,19 +44,17 @@ def scrape_tournaments():
                 headless=True,
                 args=["--disable-blink-features=AutomationControlled"]
             )
-            
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1920, "height": 1080},
                 locale="ja-JP"
             )
-            
             page = context.new_page()
             print("ページにアクセスしています...")
             try:
                 page.goto(TARGET_URL, timeout=30000, wait_until="domcontentloaded")
             except Exception as e:
-                print(f"⚠️ 読み込み遅延。強制突破します: {e}")
+                pass
             
             page.wait_for_timeout(10000) 
             html = page.content()
@@ -80,27 +68,30 @@ def scrape_tournaments():
             try:
                 name_elem = event_html.select_one('.fne-poster__title')
                 name = name_elem.text.strip() if name_elem else f"不明な大会 {idx}"
-                
-                # 🎯 ここが新機能！PRかどうかの厳密な判定ロジック
                 name_lower = name.lower()
                 
-                # PR対象になりやすいキーワード（単なるCupではなく、Cash Cupなどを指定）
+                # PRの判定
                 pr_keywords = ['fncs', 'cash cup', 'victory cup', 'major', 'grand']
-                # これが入っていたら絶対にPRではないキーワード
                 non_pr_keywords = ['ranked', 'evaluation', 'mix-up', 'community', 'mobile series', 'lightning', 'playstation', 'xbox', 'console']
-                
-                is_pr = False
-                # PRキーワードが入っていれば一旦True
-                if any(k in name_lower for k in pr_keywords):
-                    is_pr = True
-                
-                # ただし、除外キーワード（Rankedなど）が入っていればFalseに戻す
+                is_pr = any(k in name_lower for k in pr_keywords)
                 if any(k in name_lower for k in non_pr_keywords):
                     is_pr = False
-                
-                # FNCSは絶対にPRとする
                 if "fncs" in name_lower and "community" not in name_lower:
                     is_pr = True
+
+                # 🎮 ここが新機能！大会名から「機種」を推測する
+                platforms_str = "all"
+                original_platforms = "全機種"
+                
+                if "mobile" in name_lower or "switch" in name_lower or "touch" in name_lower:
+                    platforms_str = "mobile, switch"
+                    original_platforms = "モバイル/Switch"
+                elif "console" in name_lower or "playstation" in name_lower or "xbox" in name_lower or "ps4" in name_lower or "ps5" in name_lower:
+                    platforms_str = "console, ps, xbox"
+                    original_platforms = "コンソール (PS/Xbox)"
+                elif re.search(r'\bpc\b', name_lower): # 「PC」という単語が含まれているか
+                    platforms_str = "pc"
+                    original_platforms = "PC"
 
                 item_elements = event_html.select('.fne-poster__items .fne-poster__item')
                 
@@ -129,7 +120,8 @@ def scrape_tournaments():
                         
                         processed_events.append({
                             "id": f"{idx}-{reg}", "name": name, "region": reg,
-                            "platformsStr": "all", "originalPlatforms": "全機種",
+                            "platformsStr": platforms_str, # 推測した機種をセット
+                            "originalPlatforms": original_platforms,
                             "beginTime": begin_time.isoformat() + "Z",
                             "endTime": end_time.isoformat() + "Z",
                             "isPR": is_pr, "condition": "Trackerまたはゲーム内で確認"
@@ -148,7 +140,8 @@ def scrape_tournaments():
                     
                     processed_events.append({
                         "id": str(idx), "name": name, "region": reg,
-                        "platformsStr": "all", "originalPlatforms": "全機種",
+                        "platformsStr": platforms_str, # 推測した機種をセット
+                        "originalPlatforms": original_platforms,
                         "beginTime": begin_time.isoformat() + "Z",
                         "endTime": end_time.isoformat() + "Z",
                         "isPR": is_pr, "condition": "Trackerまたはゲーム内で確認"
