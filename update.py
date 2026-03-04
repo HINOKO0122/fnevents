@@ -6,12 +6,10 @@ from datetime import datetime, timedelta
 
 TARGET_URL = "https://fortnitetracker.com/events"
 
-# 🎯 時間計算を大幅に強化した関数
+# 時間計算関数
 def calculate_time(status_text, fallback_days, region):
     now = datetime.utcnow()
     
-    # 各地域ごとの「よくある開始時間」をUTC（世界標準時）で設定
-    # ASIAは日本時間18:00（UTC09:00）をデフォルトにする
     region_utc_hours = {
         "ASIA": 9,   # JST 18:00
         "OCE": 8,    # AEST 18:00
@@ -19,9 +17,9 @@ def calculate_time(status_text, fallback_days, region):
         "EU": 17,    # CET 18:00
         "BR": 21,    # BRT 18:00
         "NAE": 23,   # EST 18:00
-        "NAC": 0,    # CST 18:00 (UTCだと翌日の0時)
-        "NAW": 2,    # PST 18:00 (UTCだと翌日の2時)
-        "ALL": 9     # 指定がない場合は日本時間18時
+        "NAC": 0,    # CST 18:00
+        "NAW": 2,    # PST 18:00
+        "ALL": 9
     }
     
     num_match = re.search(r'\d+', status_text)
@@ -30,22 +28,16 @@ def calculate_time(status_text, fallback_days, region):
         text_lower = status_text.lower()
         
         if "hr" in text_lower or "hour" in text_lower:
-            # 「○時間後」と書かれている場合は、今の時間から正確に足し算
             return now + timedelta(hours=num)
         elif "min" in text_lower:
             return now + timedelta(minutes=num)
         elif "day" in text_lower:
-            # 「○日後」という大雑把な表記の場合は、日付だけ足して、時間は強制的に地域の18:00に合わせる
             target_date = now + timedelta(days=num)
             target_hour = region_utc_hours.get(region.upper(), 9)
-            
-            # NACやNAWなど、UTC基準だと翌日になってしまう地域の微調整
             if target_hour < 6:
                 target_date += timedelta(days=1)
-                
             return target_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
     
-    # 日時が不明な場合の保険
     target_date = now + timedelta(days=fallback_days)
     target_hour = region_utc_hours.get(region.upper(), 9)
     if target_hour < 6:
@@ -88,12 +80,31 @@ def scrape_tournaments():
             try:
                 name_elem = event_html.select_one('.fne-poster__title')
                 name = name_elem.text.strip() if name_elem else f"不明な大会 {idx}"
-                is_pr = any(keyword in name.lower() for keyword in ['cup', 'fncs', 'cash', 'major', 'pr'])
                 
+                # 🎯 ここが新機能！PRかどうかの厳密な判定ロジック
+                name_lower = name.lower()
+                
+                # PR対象になりやすいキーワード（単なるCupではなく、Cash Cupなどを指定）
+                pr_keywords = ['fncs', 'cash cup', 'victory cup', 'major', 'grand']
+                # これが入っていたら絶対にPRではないキーワード
+                non_pr_keywords = ['ranked', 'evaluation', 'mix-up', 'community', 'mobile series', 'lightning', 'playstation', 'xbox', 'console']
+                
+                is_pr = False
+                # PRキーワードが入っていれば一旦True
+                if any(k in name_lower for k in pr_keywords):
+                    is_pr = True
+                
+                # ただし、除外キーワード（Rankedなど）が入っていればFalseに戻す
+                if any(k in name_lower for k in non_pr_keywords):
+                    is_pr = False
+                
+                # FNCSは絶対にPRとする
+                if "fncs" in name_lower and "community" not in name_lower:
+                    is_pr = True
+
                 item_elements = event_html.select('.fne-poster__items .fne-poster__item')
                 
                 if item_elements:
-                    # Multi大会（全地域）の処理
                     for item in item_elements:
                         region_label = item.select_one('.fne-poster__item-label')
                         if not region_label: continue
@@ -113,7 +124,6 @@ def scrape_tournaments():
                         status_text = status_elem.text.strip() if status_elem else ""
                         if "ended" in status_text.lower() or "終了" in status_text: continue
                         
-                        # 地域(reg)を渡して、その地域に合った正確な時間を計算！
                         begin_time = calculate_time(status_text, idx, reg)
                         end_time = begin_time + timedelta(hours=3)
                         
@@ -125,7 +135,6 @@ def scrape_tournaments():
                             "isPR": is_pr, "condition": "Trackerまたはゲーム内で確認"
                         })
                 else:
-                    # 単一地域の大会の処理
                     region_elem = event_html.select_one('.fne-poster__region')
                     reg_text = region_elem.text.strip().upper() if region_elem else "ASIA"
                     reg = "ALL" if "MULTI" in reg_text else reg_text
@@ -134,7 +143,6 @@ def scrape_tournaments():
                     status_text = status_elem.text.strip() if status_elem else ""
                     if "ended" in status_text.lower() or "終了" in status_text: continue
                         
-                    # 地域(reg)を渡して正確な時間を計算！
                     begin_time = calculate_time(status_text, idx, reg)
                     end_time = begin_time + timedelta(hours=3)
                     
