@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import json
 import os
+import re
 from datetime import datetime, timedelta
 
 TARGET_URL = "https://fortnitetracker.com/events"
@@ -38,7 +39,7 @@ def scrape_tournaments():
         soup = BeautifulSoup(html, 'html.parser')
         processed_events = []
         
-        # 🎯 あなたが解読したクラス名（.fne-poster）をセット！
+        # あなたが教えてくれた正しいクラス名
         event_elements = soup.select('.fne-poster') 
         
         for idx, event_html in enumerate(event_elements):
@@ -50,36 +51,54 @@ def scrape_tournaments():
                 # ② 地域の取得
                 region_elem = event_html.select_one('.fne-poster__region')
                 region_text = region_elem.text.strip() if region_elem else "ASIA"
-                # 「Multi」と書かれている場合は「all」として扱う
                 region = "all" if "multi" in region_text.lower() else region_text.upper()
 
-                # ③ 終了している大会（Ended）は除外するかどうかの判定
-                status_elem = event_html.select_one('.fne-status span')
-                status_text = status_elem.text.strip().lower() if status_elem else ""
+                # ③ 開催状況と日時の計算
+                status_elem = event_html.select_one('.fne-poster__status')
+                status_text = status_elem.text.strip() if status_elem else ""
+                
+                # すでに終了している大会（Ended）はスキップする
+                if "ended" in status_text.lower() or "終了" in status_text:
+                    continue
+                
+                # 日時を計算する（基準は今の時間）
+                begin_time = datetime.utcnow()
+                
+                # 「In 5 Hrs」や「In 2 Days」の数字だけを抜き出して足し算する
+                num_match = re.search(r'\d+', status_text)
+                if num_match:
+                    num = int(num_match.group())
+                    if "Hr" in status_text or "hr" in status_text.lower():
+                        begin_time += timedelta(hours=num)
+                    elif "Day" in status_text or "day" in status_text.lower():
+                        begin_time += timedelta(days=num)
+                    elif "Min" in status_text or "min" in status_text.lower():
+                        begin_time += timedelta(minutes=num)
+                else:
+                    # 時間が書いていない場合は順番に少しずつズラす（仮置き）
+                    begin_time += timedelta(days=idx)
+
+                # 終了時間は開始時間から「3時間後」と仮定してセット
+                end_time = begin_time + timedelta(hours=3)
                 
                 # PR大会かどうかの判定
                 is_pr = any(keyword in name.lower() for keyword in ['cup', 'fncs', 'cash', 'major', 'pr'])
-                
-                # ⚠️ 日時の生成（Trackerのポスター画像には日時が直接書かれていないため、
-                # 今回は仮で現在時刻からのスケジュールを入れています）
-                begin_time = (datetime.utcnow() + timedelta(days=idx)).isoformat() + "Z"
-                end_time = (datetime.utcnow() + timedelta(days=idx, hours=3)).isoformat() + "Z"
                 
                 processed_events.append({
                     "id": str(idx),
                     "name": name,
                     "region": region,
-                    "platformsStr": "all",  # 今回のHTMLには機種がないので「全機種」扱い
+                    "platformsStr": "all",
                     "originalPlatforms": "全機種",
-                    "beginTime": begin_time,
-                    "endTime": end_time,
+                    "beginTime": begin_time.isoformat() + "Z",
+                    "endTime": end_time.isoformat() + "Z",
                     "isPR": is_pr,
-                    "condition": "公式サイトで確認"
+                    "condition": "Trackerまたはゲーム内で確認"
                 })
             except Exception as e:
-                pass
+                print(f"カード解析エラー: {e}")
 
-        # 抽出したデータをJSONとして保存
+        # データを保存
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(processed_events, f, ensure_ascii=False, indent=2)
             print("data.json の更新が完了しました！取得件数:", len(processed_events))
