@@ -103,7 +103,6 @@
                 const statusClass = t.status === 'live' ? 'status-live' : 'status-upcoming';
                 let statusText = '';
                 
-                // ⏳ 開催までの時間計算ロジック
                 if (t.status === 'live') {
                     statusText = '🔴 開催中';
                 } else {
@@ -125,7 +124,6 @@
                     <div class="status-badge ${statusClass}">${statusText}</div>
                     <div class="tournament-title">${t.name}</div>
                     <div class="info-row"><span>📅 <strong>開催:</strong> ${formatDateTime(t.beginTime)}</span></div>
-                    <div class="info-row"><span>🏁 <strong>終了:</strong> ${formatDateTime(t.endTime)}</span></div>
                     <div class="info-row"><span>🌍 <strong>地域:</strong> ${t.region}</span><span style="margin-left:10px;">🎮 <strong>機種:</strong> ${t.originalPlatforms}</span></div>
                     <div class="condition-box"><strong>📌 条件:</strong><br>${t.condition}</div>
                 `;
