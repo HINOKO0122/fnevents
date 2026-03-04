@@ -38,8 +38,8 @@
     "region": "NAE",
     "platformsStr": "all",
     "originalPlatforms": "全機種",
-    "beginTime": "2026-03-04T18:53:16.595650Z",
-    "endTime": "2026-03-04T21:53:16.595650Z",
+    "beginTime": "2026-03-04T19:04:01.223573Z",
+    "endTime": "2026-03-04T22:04:01.223573Z",
     "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
@@ -260,7 +260,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-07T17:00:00Z",
     "endTime": "2026-03-07T20:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -271,7 +271,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-08T00:00:00Z",
     "endTime": "2026-03-08T03:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -282,7 +282,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-08T02:00:00Z",
     "endTime": "2026-03-08T05:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -293,7 +293,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-06T08:00:00Z",
     "endTime": "2026-03-06T11:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -302,9 +302,9 @@
     "region": "ASIA",
     "platformsStr": "console, ps, xbox",
     "originalPlatforms": "コンソール (PS/Xbox)",
-    "beginTime": "2026-03-07T09:00:00Z",
-    "endTime": "2026-03-07T12:00:00Z",
-    "isPR": false,
+    "beginTime": "2026-03-06T09:00:00Z",
+    "endTime": "2026-03-06T12:00:00Z",
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -315,7 +315,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-07T23:00:00Z",
     "endTime": "2026-03-08T02:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -326,7 +326,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-07T21:00:00Z",
     "endTime": "2026-03-08T00:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -445,8 +445,8 @@
     "region": "NAE",
     "platformsStr": "all",
     "originalPlatforms": "全機種",
-    "beginTime": "2026-03-04T18:53:16.602011Z",
-    "endTime": "2026-03-04T21:53:16.602011Z",
+    "beginTime": "2026-03-04T19:04:01.229536Z",
+    "endTime": "2026-03-04T22:04:01.229536Z",
     "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
@@ -667,7 +667,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-07T17:00:00Z",
     "endTime": "2026-03-07T20:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -678,7 +678,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-08T00:00:00Z",
     "endTime": "2026-03-08T03:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -689,7 +689,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-08T02:00:00Z",
     "endTime": "2026-03-08T05:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -700,7 +700,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-06T08:00:00Z",
     "endTime": "2026-03-06T11:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -709,9 +709,9 @@
     "region": "ASIA",
     "platformsStr": "console, ps, xbox",
     "originalPlatforms": "コンソール (PS/Xbox)",
-    "beginTime": "2026-03-07T09:00:00Z",
-    "endTime": "2026-03-07T12:00:00Z",
-    "isPR": false,
+    "beginTime": "2026-03-06T09:00:00Z",
+    "endTime": "2026-03-06T12:00:00Z",
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -722,7 +722,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-07T23:00:00Z",
     "endTime": "2026-03-08T02:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
@@ -733,7 +733,7 @@
     "originalPlatforms": "コンソール (PS/Xbox)",
     "beginTime": "2026-03-07T21:00:00Z",
     "endTime": "2026-03-08T00:00:00Z",
-    "isPR": false,
+    "isPR": true,
     "condition": "Trackerまたはゲーム内で確認"
   },
   {
