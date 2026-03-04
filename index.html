@@ -65,28 +65,14 @@
             const currentPlatform = document.getElementById('platform-filter').value;
             const currentRegion = document.getElementById('region-filter').value;
 
-            // ▼ ここが新しくなった賢いフィルター機能です ▼
             let filtered = allTournaments.filter(t => {
-                // PRの判定
                 if (currentPR === 'pr-only' && !t.isPR) return false;
-
-                // 🌍 地域の判定（選択した地域 ＋ ALLを表示）
-                if (currentRegion !== 'all') {
-                    if (t.region !== currentRegion && t.region !== 'ALL') {
-                        return false; 
-                    }
+                if (currentRegion !== 'all' && t.region !== currentRegion && t.region !== 'ALL') return false; 
+                if (currentPlatform !== 'all' && t.platformsStr !== 'all') {
+                    if (currentPlatform === 'pc' && !t.platformsStr.includes('pc')) return false;
+                    if (currentPlatform === 'console' && !t.platformsStr.includes('xbox') && !t.platformsStr.includes('ps')) return false;
+                    if (currentPlatform === 'mobile' && !t.platformsStr.includes('mobile') && !t.platformsStr.includes('switch')) return false;
                 }
-
-                // 🎮 機種の判定（選択した機種 ＋ 全機種を表示）
-                if (currentPlatform !== 'all') {
-                    // もし大会側が「all（全機種）」じゃない場合のみ、機種のチェックをする
-                    if (t.platformsStr !== 'all') {
-                        if (currentPlatform === 'pc' && !t.platformsStr.includes('pc')) return false;
-                        if (currentPlatform === 'console' && !t.platformsStr.includes('xbox') && !t.platformsStr.includes('ps')) return false;
-                        if (currentPlatform === 'mobile' && !t.platformsStr.includes('mobile') && !t.platformsStr.includes('switch')) return false;
-                    }
-                }
-                
                 return true;
             });
 
@@ -97,10 +83,8 @@
                 t.status = (t.beginTimeObj <= now && now <= t.endTimeObj) ? 'live' : 'upcoming';
             });
 
-            // すでに終わった大会は画面から消す
             filtered = filtered.filter(t => t.endTimeObj >= now);
 
-            // ソート（開催中を上に、あとは開催日時が早い順に並べる）
             filtered.sort((a, b) => {
                 if (a.status === 'live' && b.status !== 'live') return -1;
                 if (a.status !== 'live' && b.status === 'live') return 1;
@@ -115,8 +99,27 @@
             filtered.forEach(t => {
                 const card = document.createElement('div');
                 card.className = 'card';
+                
                 const statusClass = t.status === 'live' ? 'status-live' : 'status-upcoming';
-                const statusText = t.status === 'live' ? '🔴 開催中' : '予定';
+                let statusText = '';
+                
+                // ⏳ 開催までの時間計算ロジック
+                if (t.status === 'live') {
+                    statusText = '🔴 開催中';
+                } else {
+                    const diffMs = t.beginTimeObj - now;
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    
+                    if (diffHours < 1) {
+                        statusText = `⏳ まもなく開催`;
+                    } else if (diffHours < 24) {
+                        statusText = `⏳ 開催まで約${diffHours}時間`;
+                    } else {
+                        const diffDays = Math.floor(diffHours / 24);
+                        statusText = `⏳ 開催まで約${diffDays}日`;
+                    }
+                }
+
                 card.innerHTML = `
                     ${t.isPR ? '<div class="pr-badge">PR</div>' : ''}
                     <div class="status-badge ${statusClass}">${statusText}</div>
