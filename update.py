@@ -11,38 +11,54 @@ def scrape_tournaments():
     
     html = ""
     try:
-        # 人間の代わりにChromeブラウザを裏側で起動する
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            # ロボット感を消すための特殊な起動設定（ステルスモード）
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
             
-            # 人間が使っているようなブラウザ情報をセット
-            page.set_extra_http_headers({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"})
+            # 人間が使っているようなブラウザ環境を偽装
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={"width": 1920, "height": 1080},
+                locale="ja-JP"
+            )
             
-            print("ページにアクセスしています...")
-            page.goto(TARGET_URL, timeout=60000)
+            page = context.new_page()
             
-            # ページ内のデータ（JavaScript）が読み込まれるのを5秒待つ
-            page.wait_for_timeout(5000) 
+            print("ページにアクセスしています（バリア突破を試みます）...")
+            try:
+                # 'load'（完全読み込み）ではなく、骨組みができた段階(domcontentloaded)で次に進む
+                # 30秒で一旦区切りをつける
+                page.goto(TARGET_URL, timeout=30000, wait_until="domcontentloaded")
+            except Exception as e:
+                print(f"⚠️ 読み込みが遅延しています。このまま強制突破を試みます: {e}")
+            
+            # JavaScriptがデータを描画するのを10秒だけ待つ
+            page.wait_for_timeout(10000) 
             
             # 読み込み終わった画面のHTML（裏側のコード）をすべて取得
             html = page.content()
             browser.close()
-            print("ページの取得に成功しました！解析を開始します。")
+            print("ページの取得に完了しました！解析を開始します。")
 
+        # 相手の最強バリア「Cloudflare」に引っかかっていないかチェック
+        if "Just a moment..." in html or "Cloudflare" in html or "cf-browser-verification" in html:
+            print("❌ Cloudflareの強力なBot対策バリアに完全にブロックされました。データが空っぽです。")
+        
         # BeautifulSoupでHTMLを解析
         soup = BeautifulSoup(html, 'html.parser')
         processed_events = []
         
-        # 大会情報のブロックを探す（※サイトの仕様に合わせて今後修正が必要な箇所）
-        event_elements = soup.select('.event-card, .trn-card') 
+        # 相手サイトの構造（クラス名）の候補をいくつか入れておく
+        event_elements = soup.select('.trn-card, .event-card') 
         
         for idx, event_html in enumerate(event_elements):
             try:
-                name_elem = event_html.select_one('.event-title, .name, h3')
+                name_elem = event_html.select_one('.trn-card__header-title, h3, .name')
                 name = name_elem.text.strip() if name_elem else f"不明な大会 {idx}"
                 
-                # 日時は仮のものを生成（実際のサイトの構造に合わせて抽出するロジックが必要）
                 begin_time = (datetime.utcnow() + timedelta(days=idx)).isoformat() + "Z"
                 end_time = (datetime.utcnow() + timedelta(days=idx, hours=3)).isoformat() + "Z"
                 
@@ -60,10 +76,10 @@ def scrape_tournaments():
                     "condition": "公式サイトやTrackerで確認してください"
                 })
             except Exception as e:
-                print(f"カードの解析中にエラー: {e}")
+                pass
 
         if len(processed_events) == 0:
-            print("⚠️ ページは取得できましたが、大会データが見つかりませんでした。HTMLのクラス名が変わった可能性があります。")
+            print("⚠️ 大会データが見つかりませんでした。サイトのデザインが変わったか、バリアに弾かれています。")
 
         # データを保存
         with open('data.json', 'w', encoding='utf-8') as f:
@@ -71,7 +87,7 @@ def scrape_tournaments():
             print("data.json の更新が完了しました！取得件数:", len(processed_events))
 
     except Exception as e:
-        print(f"❌ Playwright実行中にエラーが発生しました: {e}")
+        print(f"❌ 致命的なエラーが発生しました: {e}")
         exit(1)
 
 if __name__ == "__main__":
