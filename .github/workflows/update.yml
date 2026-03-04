@@ -2,7 +2,7 @@ name: Auto Update Fortnite Tournaments (Scraping)
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 * * * *'  # 毎時0分（1時間ごと）に実行
   workflow_dispatch:
 
 jobs:
