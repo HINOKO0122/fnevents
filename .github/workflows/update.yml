@@ -2,8 +2,8 @@ name: Auto Update Fortnite Tournaments (Scraping)
 
 on:
   schedule:
-    - cron: '0 3 * * *' # 毎日 日本時間の昼12時に実行
-  workflow_dispatch: # 手動で動かすためのボタン
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   update-data:
@@ -17,10 +17,12 @@ jobs:
         with:
           python-version: '3.x'
 
+      # Playwright（ブラウザ自動化ツール）をインストール
       - name: Install scraping libraries
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install playwright beautifulsoup4
+          playwright install chromium
 
       - name: Run Python Scraping Script
         run: python update.py
@@ -30,5 +32,5 @@ jobs:
           git config --global user.name 'GitHub Action Bot'
           git config --global user.email 'action@github.com'
           git add data.json
-          git commit -m "Auto-update tournament data via scraping" || exit 0
+          git commit -m "Auto-update tournament data via Playwright" || exit 0
           git push
