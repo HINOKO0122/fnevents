@@ -6,22 +6,51 @@ from datetime import datetime, timedelta
 
 TARGET_URL = "https://fortnitetracker.com/events"
 
-# 時間を計算する専用の関数
-def calculate_time(status_text, fallback_days):
-    begin_time = datetime.utcnow()
+# 🎯 時間計算を大幅に強化した関数
+def calculate_time(status_text, fallback_days, region):
+    now = datetime.utcnow()
+    
+    # 各地域ごとの「よくある開始時間」をUTC（世界標準時）で設定
+    # ASIAは日本時間18:00（UTC09:00）をデフォルトにする
+    region_utc_hours = {
+        "ASIA": 9,   # JST 18:00
+        "OCE": 8,    # AEST 18:00
+        "ME": 15,    # AST 18:00
+        "EU": 17,    # CET 18:00
+        "BR": 21,    # BRT 18:00
+        "NAE": 23,   # EST 18:00
+        "NAC": 0,    # CST 18:00 (UTCだと翌日の0時)
+        "NAW": 2,    # PST 18:00 (UTCだと翌日の2時)
+        "ALL": 9     # 指定がない場合は日本時間18時
+    }
+    
     num_match = re.search(r'\d+', status_text)
     if num_match:
         num = int(num_match.group())
         text_lower = status_text.lower()
+        
         if "hr" in text_lower or "hour" in text_lower:
-            begin_time += timedelta(hours=num)
-        elif "day" in text_lower:
-            begin_time += timedelta(days=num)
+            # 「○時間後」と書かれている場合は、今の時間から正確に足し算
+            return now + timedelta(hours=num)
         elif "min" in text_lower:
-            begin_time += timedelta(minutes=num)
-    else:
-        begin_time += timedelta(days=fallback_days)
-    return begin_time
+            return now + timedelta(minutes=num)
+        elif "day" in text_lower:
+            # 「○日後」という大雑把な表記の場合は、日付だけ足して、時間は強制的に地域の18:00に合わせる
+            target_date = now + timedelta(days=num)
+            target_hour = region_utc_hours.get(region.upper(), 9)
+            
+            # NACやNAWなど、UTC基準だと翌日になってしまう地域の微調整
+            if target_hour < 6:
+                target_date += timedelta(days=1)
+                
+            return target_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    
+    # 日時が不明な場合の保険
+    target_date = now + timedelta(days=fallback_days)
+    target_hour = region_utc_hours.get(region.upper(), 9)
+    if target_hour < 6:
+        target_date += timedelta(days=1)
+    return target_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
 
 def scrape_tournaments():
     print(f"[{datetime.now()}] Playwrightでスクレイピングを開始します: {TARGET_URL}")
@@ -61,18 +90,15 @@ def scrape_tournaments():
                 name = name_elem.text.strip() if name_elem else f"不明な大会 {idx}"
                 is_pr = any(keyword in name.lower() for keyword in ['cup', 'fncs', 'cash', 'major', 'pr'])
                 
-                # 🎯 ここが新機能！地域ごとの詳細リストがあるかチェック
                 item_elements = event_html.select('.fne-poster__items .fne-poster__item')
                 
                 if item_elements:
-                    # Multi大会の場合：地域ごとに分割して個別の大会として保存する
+                    # Multi大会（全地域）の処理
                     for item in item_elements:
                         region_label = item.select_one('.fne-poster__item-label')
-                        if not region_label:
-                            continue
+                        if not region_label: continue
                         
                         reg_text = region_label.text.strip().upper()
-                        # サイトの長い表記を、フィルター用の短い表記（ASIA, EU, NAC...）に翻訳
                         if "EUROPE" in reg_text: reg = "EU"
                         elif "ASIA" in reg_text: reg = "ASIA"
                         elif "CENTRAL" in reg_text: reg = "NAC"
@@ -85,60 +111,49 @@ def scrape_tournaments():
                         
                         status_elem = item.select_one('.fne-status')
                         status_text = status_elem.text.strip() if status_elem else ""
+                        if "ended" in status_text.lower() or "終了" in status_text: continue
                         
-                        if "ended" in status_text.lower() or "終了" in status_text:
-                            continue
-                        
-                        # その地域専用の時間を計算
-                        begin_time = calculate_time(status_text, idx)
+                        # 地域(reg)を渡して、その地域に合った正確な時間を計算！
+                        begin_time = calculate_time(status_text, idx, reg)
                         end_time = begin_time + timedelta(hours=3)
                         
                         processed_events.append({
-                            "id": f"{idx}-{reg}",
-                            "name": name,
-                            "region": reg,
-                            "platformsStr": "all",
-                            "originalPlatforms": "全機種",
+                            "id": f"{idx}-{reg}", "name": name, "region": reg,
+                            "platformsStr": "all", "originalPlatforms": "全機種",
                             "beginTime": begin_time.isoformat() + "Z",
                             "endTime": end_time.isoformat() + "Z",
-                            "isPR": is_pr,
-                            "condition": "Trackerまたはゲーム内で確認"
+                            "isPR": is_pr, "condition": "Trackerまたはゲーム内で確認"
                         })
                 else:
-                    # 単一地域の大会の場合は今まで通り
+                    # 単一地域の大会の処理
                     region_elem = event_html.select_one('.fne-poster__region')
                     reg_text = region_elem.text.strip().upper() if region_elem else "ASIA"
                     reg = "ALL" if "MULTI" in reg_text else reg_text
                     
                     status_elem = event_html.select_one('.fne-poster__status')
                     status_text = status_elem.text.strip() if status_elem else ""
-                    
-                    if "ended" in status_text.lower() or "終了" in status_text:
-                        continue
+                    if "ended" in status_text.lower() or "終了" in status_text: continue
                         
-                    begin_time = calculate_time(status_text, idx)
+                    # 地域(reg)を渡して正確な時間を計算！
+                    begin_time = calculate_time(status_text, idx, reg)
                     end_time = begin_time + timedelta(hours=3)
                     
                     processed_events.append({
-                        "id": str(idx),
-                        "name": name,
-                        "region": reg,
-                        "platformsStr": "all",
-                        "originalPlatforms": "全機種",
+                        "id": str(idx), "name": name, "region": reg,
+                        "platformsStr": "all", "originalPlatforms": "全機種",
                         "beginTime": begin_time.isoformat() + "Z",
                         "endTime": end_time.isoformat() + "Z",
-                        "isPR": is_pr,
-                        "condition": "Trackerまたはゲーム内で確認"
+                        "isPR": is_pr, "condition": "Trackerまたはゲーム内で確認"
                     })
             except Exception as e:
                 pass
 
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(processed_events, f, ensure_ascii=False, indent=2)
-            print("data.json の更新が完了しました！取得件数:", len(processed_events))
+            print("data.json の更新が完了しました！")
 
     except Exception as e:
-        print(f"❌ 致命的なエラーが発生しました: {e}")
+        print(f"❌ 致命的なエラー: {e}")
         exit(1)
 
 if __name__ == "__main__":
