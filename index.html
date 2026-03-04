@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortnite 競技大会トラッカー</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --accent: #facc15;
+            --live-color: #ef4444;
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        /* フィルター部分のスタイル */
+        .filters {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid #334155;
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        select:hover {
+            border-color: var(--accent);
+        }
+
+        /* 大会リストのスタイル */
+        .tournament-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 4px solid #334155;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-top-color: var(--accent);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status-live {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--live-color);
+        }
+
+        .status-upcoming {
+            background-color: rgba(148, 163, 184, 0.2);
+            color: var(--text-sub);
+        }
+
+        .tournament-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+        }
+
+        .tournament-info {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .pr-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--accent);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Fortnite 競技大会トラッカー</h1>
+
+    <div class="filters">
+        <select id="pr-filter">
+            <option value="all" selected>すべての大会</option>
+            <option value="pr-only">PR大会のみ</option>
+        </select>
+
+        <select id="platform-filter">
+            <option value="all" selected>すべての機種</option>
+            <option value="pc">PC</option>
+            <option value="console">コンソール (PS/Xbox)</option>
+            <option value="mobile">モバイル/Switch</option>
+        </select>
+
+        <select id="region-filter">
+            <option value="Asia" selected>アジア (Asia)</option>
+            <option value="NA">北米 (NA)</option>
+            <option value="EU">ヨーロッパ (EU)</option>
+            <option value="ME">中東 (ME)</option>
+        </select>
+    </div>
+
+    <div class="tournament-grid" id="tournament-container">
+        </div>
+
+    <script>
+        // 【注意】ここでは動作確認用のダミーデータ（モック）を使用しています。
+        // 実際にはFortniteAPI.ioなどの外部APIからデータを取得する処理に書き換えます。
+        const mockTournaments = [
+            { id: 1, name: "FNCS Major 1 - 準決勝", status: "live", date: "2026-03-04T18:00:00", region: "Asia", platform: "all", isPR: true },
+            { id: 2, name: "Duos Cash Cup", status: "upcoming", date: "2026-03-05T17:00:00", region: "Asia", platform: "all", isPR: true },
+            { id: 3, name: "PlayStation Cup", status: "upcoming", date: "2026-03-06T13:00:00", region: "Asia", platform: "console", isPR: false },
+            { id: 4, name: "Victory Cup", status: "upcoming", date: "2026-03-07T10:00:00", region: "NA", platform: "all", isPR: true },
+            { id: 5, name: "Mix-Up Monday", status: "upcoming", date: "2026-03-09T18:00:00", region: "Asia", platform: "all", isPR: false },
+            { id: 6, name: "PC Only Cup", status: "upcoming", date: "2026-03-10T15:00:00", region: "EU", platform: "pc", isPR: true }
+        ];
+
+        const container = document.getElementById('tournament-container');
+        const prFilter = document.getElementById('pr-filter');
+        const platformFilter = document.getElementById('platform-filter');
+        const regionFilter = document.getElementById('region-filter');
+
+        // 日付をフォーマットする関数
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours()}:00`;
+        }
+
+        // 大会を描画する関数
+        function renderTournaments() {
+            container.innerHTML = ''; // 一度クリア
+
+            // 現在のフィルター値を取得
+            const currentPR = prFilter.value;
+            const currentPlatform = platformFilter.value;
+            const currentRegion = regionFilter.value;
+
+            // フィルタリング処理
+            let filtered = mockTournaments.filter(t => {
+                // PR判定
+                if (currentPR === 'pr-only' && !t.isPR) return false;
+                // 地域判定 (allが選択されている場合はスキップ、今回はデフォルトがAsia)
+                if (currentRegion !== 'all' && t.region !== currentRegion) return false;
+                // 機種判定 (大会が全機種対応'all'なら許可)
+                if (currentPlatform !== 'all' && t.platform !== 'all' && t.platform !== currentPlatform) return false;
+                
+                return true;
+            });
+
+            // ソート処理 (開催中を上に、未開催を日付順に)
+            filtered.sort((a, b) => {
+                if (a.status === 'live' && b.status !== 'live') return -1;
+                if (a.status !== 'live' && b.status === 'live') return 1;
+                return new Date(a.date) - new Date(b.date);
+            });
+
+            // HTMLの生成
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="text-align:center; width:100%; color:#94a3b8;">該当する大会がありません。</p>';
+                return;
+            }
+
+            filtered.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                const statusClass = t.status === 'live' ? 'status-live' : 'status-upcoming';
+                const statusText = t.status === 'live' ? '🔴 開催中' : '予定';
+                const prBadge = t.isPR ? '<div class="pr-badge">PR</div>' : '';
+
+                card.innerHTML = `
+                    ${prBadge}
+                    <div class="status-badge ${statusClass}">${statusText}</div>
+                    <h3 class="tournament-title">${t.name}</h3>
+                    <div class="tournament-info">
+                        <span>📅 ${formatDate(t.date)}</span>
+                        <span>🌍 ${t.region}</span>
+                    </div>
+                    <div class="tournament-info">
+                        <span>🎮 ${t.platform === 'all' ? '全機種' : t.platform.toUpperCase()}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // フィルターが変更されたら再描画
+        prFilter.addEventListener('change', renderTournaments);
+        platformFilter.addEventListener('change', renderTournaments);
+        regionFilter.addEventListener('change', renderTournaments);
+
+        // 初期表示
+        renderTournaments();
+    </script>
+</body>
+</html>
