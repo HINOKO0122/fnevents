@@ -70,16 +70,29 @@ def scrape_tournaments():
                 name = name_elem.text.strip() if name_elem else f"不明な大会 {idx}"
                 name_lower = name.lower()
                 
-                # PRの判定
-                pr_keywords = ['fncs', 'cash cup', 'victory cup', 'major', 'grand']
-                non_pr_keywords = ['ranked', 'evaluation', 'mix-up', 'community', 'mobile series', 'lightning', 'playstation', 'xbox', 'console']
-                is_pr = any(k in name_lower for k in pr_keywords)
+                # 🎯 PR判定のロジックを大改良
+                is_pr = False
+                
+                # ① まず「Cup」や「Major」がついていたら一旦PR候補にする
+                if "cup" in name_lower or "major" in name_lower:
+                    is_pr = True
+                
+                # ② エンジョイ・練習・ランク系なら一旦PRから外す（consoleやmobileは除外キーワードから消しました）
+                non_pr_keywords = ['ranked', 'evaluation', 'mix-up', 'community', 'lightning']
                 if any(k in name_lower for k in non_pr_keywords):
                     is_pr = False
-                if "fncs" in name_lower and "community" not in name_lower:
+                
+                # ③ ただし「Victory Cup」「Cash Cup」「FNCS」などの"ガチキーワード"があれば、問答無用でPR復活！
+                strong_pr_keywords = ['fncs', 'cash cup', 'victory cup', 'major', 'grand']
+                if any(k in name_lower for k in strong_pr_keywords):
                     is_pr = True
+                    
+                # ④ 例外中の例外（FNCSのコミュニティカップだけはPRではない）
+                if "fncs" in name_lower and "community" in name_lower:
+                    is_pr = False
 
-                # 🎮 ここが新機能！大会名から「機種」を推測する
+
+                # 機種推測
                 platforms_str = "all"
                 original_platforms = "全機種"
                 
@@ -89,7 +102,7 @@ def scrape_tournaments():
                 elif "console" in name_lower or "playstation" in name_lower or "xbox" in name_lower or "ps4" in name_lower or "ps5" in name_lower:
                     platforms_str = "console, ps, xbox"
                     original_platforms = "コンソール (PS/Xbox)"
-                elif re.search(r'\bpc\b', name_lower): # 「PC」という単語が含まれているか
+                elif re.search(r'\bpc\b', name_lower):
                     platforms_str = "pc"
                     original_platforms = "PC"
 
@@ -120,7 +133,7 @@ def scrape_tournaments():
                         
                         processed_events.append({
                             "id": f"{idx}-{reg}", "name": name, "region": reg,
-                            "platformsStr": platforms_str, # 推測した機種をセット
+                            "platformsStr": platforms_str,
                             "originalPlatforms": original_platforms,
                             "beginTime": begin_time.isoformat() + "Z",
                             "endTime": end_time.isoformat() + "Z",
@@ -140,7 +153,7 @@ def scrape_tournaments():
                     
                     processed_events.append({
                         "id": str(idx), "name": name, "region": reg,
-                        "platformsStr": platforms_str, # 推測した機種をセット
+                        "platformsStr": platforms_str,
                         "originalPlatforms": original_platforms,
                         "beginTime": begin_time.isoformat() + "Z",
                         "endTime": end_time.isoformat() + "Z",
